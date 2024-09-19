@@ -1,0 +1,115 @@
+import sys
+import numpy as np
+import pandas as pd
+f1=open(sys.argv[1],"r")
+#tt1=f1.readline().strip().split()
+
+d1={}
+for i in f1.readlines():
+    if i[0] == "#":continue
+    s=i.strip().split()
+    if s[0][0] == "c":
+       d1[s[0]+"-"+s[1]]=s
+    else:
+       d1["chr"+s[0]+"-"+s[1]]=s
+
+f2=open(sys.argv[2],"r")
+#tt2=f2.readline().strip().split()
+#tt=(tt1+tt2[9:])
+merge_list=[]
+#merge_list.append(tt)
+
+while 1:
+    l=f2.readline()
+    if not l: break
+    s=l.strip().split()
+    if s[0][0] == "#": continue
+    idx1="chr"+s[0]+"-"+s[1]
+    idx2=s[0]+"-"+s[1]
+    index= idx2 if s[0][0] == "c" else idx1
+
+    if index in d1:
+       ref1=s[3]
+       alt1=s[4].split(",")[0]
+       ref2=d1[index][3]
+       alt2=d1[index][4].split(",")[0]
+
+       if ref1 == alt2 and alt1 == ref2:
+          zy=[]
+          for i in s[9:]:
+              if i.split(":")[0] == "0/0" or i.split(":")[0] == "0|0" or i.split(":")[0] == "00":
+                 i="11"
+                 zy.append(i)
+              elif i.split(":")[0] == "1/1" or i.split(":")[0] == "1|1" or i.split(":")[0] == "11":
+                 i="00"
+                 zy.append(i)
+              else:
+                 zy.append(i.split(":")[0])
+          merge_list.append(d1[index]+zy)
+       elif ref1==ref2 and alt1 == alt2:
+          merge_list.append(d1[index]+s[9:])
+
+f1.close()
+f2.close()
+
+#print("chr"+"\t"+"pos"+"\t"+"acc"+"\t"+"pre"+"\t"+"rec")
+for s in merge_list[0:]:
+     TP=0
+     FP=0
+     FN=0
+     N=0
+     OO1=s[9:int((len(s)+9)/2)]
+     OO2=s[int((len(s)+9)/2):]
+
+     OO1=[i.split(":")[0] for i in OO1]
+     O1=[]
+     for i in OO1:
+         if "|" in i:
+           h=i.replace("|","")
+           O1.append(h)
+         else:
+           h=i.replace("/","")
+           O1.append(h)
+     for i in range(len(O1)):
+         if O1[i] == "10":
+            O1[i] = "01"
+
+     O2=[]
+     for i in OO2:
+         if "|" in i:
+            h=i.split(":")[0].replace("|","")
+            O2.append(h)
+         else:
+            h=i.split(":")[0].replace("/","")
+            O2.append(h)
+     for i in range(len(O2)):
+         if O2[i] == "10":
+            O2[i] = "01"
+
+     for i,j in zip(O1,O2):
+         if i == "..":continue
+         if j == "..":continue
+         N+=1
+         if i == j: TP+=1
+         elif i != "..": FP+=1
+         elif j != "..": FN+=1
+     if N==0:
+         continue
+     if TP==0:
+         acc=0
+         pre=0
+         rec=0
+     else:
+         acc=float(TP)/N
+         pre=float(TP)/(TP+FP)
+         rec=float(TP)/(TP+FN)
+     print(s[0],s[1],acc,pre,rec)
+
+'''
+     if acc < 0.5:
+        print("Detailed:"+s[0]+"-"+s[1]+":"+str(acc))
+        print("answer :"+",".join(s[3:5])+":"+','.join(O1))
+        print("imputed:"+",".join(s[3:5])+":"+','.join(O2))
+        print("")
+
+'''
